@@ -3,7 +3,15 @@ library(runjags)
 library(here)
 
 # Set seed for consistent results
-set.seed(3001)
+# set.seed(3001)
+
+
+# Settings for the compute cluster
+Sys.setenv(
+    OMP_NUM_THREADS = 1,
+    MKL_NUM_THREADS=1,
+    BLAS_NUM_THREADS=1,
+    LAPACK_NUM_THREDS=1)
 
 
 
@@ -37,8 +45,7 @@ spike_slab_laplace <- function(n, r, rate){
 }
 
 # Generate data from linear model
-# n = 20; p = 250
-n = 5; p = 15
+n = 20; p = 250
 true_betas <- spike_slab_laplace(n = p, r = 0.1, rate = 1/10)
 true_S <- which(true_betas != 0)
 
