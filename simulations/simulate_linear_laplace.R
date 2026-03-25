@@ -30,7 +30,7 @@ sparse_prop <- as.numeric(args[4])
 
 
 # Create directory for saving results
-model_name <- "linear"
+model_name <- "linear_laplace"
 
 result_dir <- paste0("./simulations/results/", model_name, "/")
 n_subdir <- length(list.dirs(path = result_dir, recursive = FALSE))
