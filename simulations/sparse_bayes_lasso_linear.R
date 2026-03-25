@@ -3,7 +3,7 @@ library(runjags)
 library(here)
 
 # Set seed for consistent results
-set.seed(3000)
+set.seed(3001)
 
 
 
