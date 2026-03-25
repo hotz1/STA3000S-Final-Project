@@ -16,7 +16,7 @@ Sys.setenv(
 
 
 # Set file location and working directory
-here::i_am("simulations/sparse_bayes_lasso_linear.R")
+here::i_am("simulations/simulate_linear_laplace.R")
 setwd(here::here())
 
 
