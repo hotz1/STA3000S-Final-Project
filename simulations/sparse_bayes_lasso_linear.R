@@ -8,7 +8,7 @@ set.seed(3001)
 
 
 # Set file location and working directory
-here::i_am("simulations/sparse_bayes_lasso.R")
+here::i_am("simulations/sparse_bayes_lasso_linear.R")
 setwd(here::here())
 
 # Create directory for saving results
