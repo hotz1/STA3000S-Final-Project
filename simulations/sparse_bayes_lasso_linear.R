@@ -19,6 +19,16 @@ Sys.setenv(
 here::i_am("simulations/sparse_bayes_lasso_linear.R")
 setwd(here::here())
 
+
+# Get command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+n_sims <- as.integer(args[1])
+n <- as.integer(args[2])
+p <- as.integer(args[3])
+sparse_prop <- as.numeric(args[4])
+
+
+
 # Create directory for saving results
 model_name <- "linear"
 
@@ -45,15 +55,14 @@ spike_slab_laplace <- function(n, r, rate){
 }
 
 # Generate data from linear model
-n = 50; p = 500
-true_betas <- spike_slab_laplace(n = p, r = 0.1, rate = 1/10)
+true_betas <- spike_slab_laplace(p, sparse_prop, rate = 1/5)
 true_S <- which(true_betas != 0)
 
 X_train <- matrix(rnorm(n * p, mean = 0, sd = 1), nrow = n, ncol = p)
 Y_train <- X_train %*% true_betas + rnorm(n, mean = 0, sd = 1)
 
 X_test <- matrix(rnorm(n * p, mean = 0, sd = 1), nrow = n, ncol = p)
-Y_test <- X_train %*% true_betas + rnorm(n, mean = 0, sd = 1)
+Y_test <- X_test %*% true_betas + rnorm(n, mean = 0, sd = 1)
 
 
 
@@ -90,7 +99,7 @@ lasso_post_data <- list(
     n = n,
     p = p,
     tau = 1,
-    rate = 1/10,
+    rate = 1/5,
     p_u = p^(1.005)
 )
 
@@ -146,7 +155,7 @@ lasso_post_samples <- run.jags(
     data = lasso_post_data,
     inits = list(lasso_init_1, lasso_init_2, lasso_init_3, lasso_init_4),
     n.chains = 4,
-    sample = 10000,
+    sample = n_sims,
     method = "parallel"
 )
 
