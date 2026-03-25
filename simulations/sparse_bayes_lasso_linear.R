@@ -36,12 +36,17 @@ spike_slab_laplace <- function(n, r, rate){
   return(spikes * exp_sim)
 }
 
-# Linear model
-n = 500; p = 500
-true_betas <- spike_slab_laplace(n = p, r = 0.01, rate = 1)
+# Generate data from linear model
+# n = 20; p = 250
+n = 5; p = 15
+true_betas <- spike_slab_laplace(n = p, r = 0.1, rate = 1/10)
 true_S <- which(true_betas != 0)
-X <- diag(p)
-Y <- X %*% true_betas + rnorm(n, sd = 1)
+
+X_train <- matrix(rnorm(n * p, mean = 0, sd = 1), nrow = n, ncol = p)
+Y_train <- X_train %*% true_betas + rnorm(n, mean = 0, sd = 1)
+
+X_test <- matrix(rnorm(n * p, mean = 0, sd = 1), nrow = n, ncol = p)
+Y_test <- X_train %*% true_betas + rnorm(n, mean = 0, sd = 1)
 
 
 
@@ -73,13 +78,13 @@ lasso_post_model <- "
 
 # Data for MCMC model
 lasso_post_data <- list(
-    Y = as.vector(Y),
-    X = as.matrix(X),
-    n = nrow(X),
-    p = ncol(X),
+    Y = as.vector(Y_train),
+    X = as.matrix(X_train),
+    n = n,
+    p = p,
     tau = 1,
-    rate = 1,
-    p_u = ncol(X)^(1.005)
+    rate = 1/10,
+    p_u = p^(1.005)
 )
 
 # Initializations
@@ -163,29 +168,43 @@ spike_slab_mode <- function(samples, slab_threshold){
 mcmc_summary_df <- as.data.frame(summary(lasso_post_samples))
 mcmc_summary_df <- cbind(TrueCoef = true_betas, mcmc_summary_df)
 
+# Extract the chains
+mcmc_sample_df <- as.matrix(as.mcmc.list(lasso_post_samples))
+mcmc_sample_S <- mcmc_sample_df[, true_S]
 
-# Extract information from chains
-mcmc_samples <- lasso_post_samples$mcmc
-for(i in seq_along(mcmc_samples)){
-    
-    # Save MCMC samples for truly non-zero coefficients to disk
-    mcmc_sample_df = as.data.frame(mcmc_samples[[i]])
-    mcmc_sample_S <- mcmc_sample_df[, true_S]
-    filename = paste0(subdir_name, "LASSO_MCMC_samples_", i, ".csv")
-    write.csv(mcmc_sample_S, file = filename)
-    
-    # Compute posterior modes for each vector from samples
-    MCMC_mode <- apply(
-        mcmc_sample_df, 
-        MARGIN = 2, 
-        FUN = spike_slab_mode,
-        slab_threshold = 0.5
-    )
-    MCMC_colname = paste0("MCMC.mode.", i)
-    mcmc_summary_df[[MCMC_colname]] <- MCMC_mode
-}
+write.csv(
+    mcmc_sample_S, 
+    file = paste0(subdir_name, "LASSO_MCMC_samples.csv")
+)
+
+# Compute posterior modes for each parameter from samples
+MCMC_mode <- apply(
+    mcmc_sample_df,
+    MARGIN = 2,
+    FUN = spike_slab_mode,
+    slab_threshold = 0.5
+)
+mcmc_summary_df[["MCMC.mode"]] <- MCMC_mode
 
 # Write the summary of the models to disk
 write.csv(
     mcmc_summary_df,
-    file = paste0(subdir_name, "LASSO_MCMC_summary.csv"))
+    file = paste0(subdir_name, "LASSO_MCMC_summary.csv")
+)
+
+
+# Compute posterior modes for Y_train and Y_test
+Y_train_mode <- X_train %*% MCMC_mode
+Y_test_mode <- X_test %*% MCMC_mode
+
+post_pred_df <- data.frame(
+    Y_train_true = Y_train,
+    Y_train_pred = Y_train_mode,
+    Y_test_true = Y_test,
+    Y_test_pred = Y_test_mode
+)
+
+write.csv(
+    post_pred_df,
+    file = paste0(subdir_name, "LASSO_predictions.csv")
+)
