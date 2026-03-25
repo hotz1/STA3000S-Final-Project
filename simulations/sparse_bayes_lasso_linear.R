@@ -45,7 +45,7 @@ spike_slab_laplace <- function(n, r, rate){
 }
 
 # Generate data from linear model
-n = 20; p = 250
+n = 50; p = 500
 true_betas <- spike_slab_laplace(n = p, r = 0.1, rate = 1/10)
 true_S <- which(true_betas != 0)
 
