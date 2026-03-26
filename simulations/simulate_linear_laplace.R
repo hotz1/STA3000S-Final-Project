@@ -23,7 +23,7 @@ parser <- ArgumentParser()
 parser$add_argument("--n_sims", type = "integer")
 parser$add_argument("--n", type = "integer")
 parser$add_argument("--p", type = "integer")
-parser$add_argument("--sparse_prop", type = "double")
+parser$add_argument("--p_true", type = "integer")
 parser$add_argument("--seed", type = "integer")
 args <- parser$parse_args()
 
@@ -31,10 +31,8 @@ args <- parser$parse_args()
 n_sims <- args$n_sims
 n <- args$n
 p <- args$p
-sparse_prop <- args$sparse_prop
+p_true <- args$p_true
 seed <- args$seed
-
-
 
 # Create directory for saving results
 model_name <- "linear_laplace"
@@ -52,17 +50,17 @@ if(!dir.exists(subdir_name)){
 
 ##### Simulate the data #####
 
-# Function for the prior 
-spike_slab_laplace <- function(n, r, rate){
-  # Simulate from Laplace spike-and-slab with probability 
-  spikes <- sample(c(-1, 0, 1), size = n, 
-                   replace = T, prob = c(r/2, 1-r, r/2))
-  exp_sim <- rexp(n, rate = rate)
-  return(spikes * exp_sim)
+# Generate coefficients 
+simulate_coefs <- function(p, p_true, rate){
+    # Simulates p_true coefficients from Laplace, pads to size p with zeros
+    signs <- sample(c(-1, 1), size = p_true, replace = T)
+    exp_sim <- rexp(p_true, rate = rate)
+    zeros <- rep(0, p - p_true)
+    return(c(signs * exp_sim, zeros))
 }
 
 # Generate data from linear model
-true_betas <- spike_slab_laplace(p, sparse_prop, rate = 1/5)
+true_betas <- simulate_coefs(p, p_true, rate = 1/5)
 true_S <- which(true_betas != 0)
 
 X_train <- matrix(rnorm(n * p, mean = 0, sd = 1), nrow = n, ncol = p)
@@ -92,7 +90,18 @@ lasso_post_model <- "
             cat[j] ~ dcat(c(r/2, 1-r, r/2))
             slab[j] ~ dexp(rate)
             beta[j] <- (cat[j] - 2) * slab[j]
+            
+            # Check if parameter is set to zero
+            is_nonzero[j] <- 1 - equals(beta[j], 0)
         }
+        # Compute sparsity of parameter vector
+        sparse_dim <- sum(is_nonzero[])
+        
+        # Check if S is in support of the non-zero vectors
+        for(k in 1:s){
+            supported[k] <- is_nonzero[S[k]]
+        }
+        S_supported <- equals(sum(supported[]), s)
         
         # Prior on r, r ~ Beta(1, p^u)
         r ~ dbeta(1, p_u)
@@ -105,6 +114,8 @@ lasso_post_data <- list(
     X = as.matrix(X_train),
     n = n,
     p = p,
+    S = true_S,
+    s = p_true,
     tau = 1,
     rate = 1/5,
     p_u = p^(1.005)
@@ -140,25 +151,13 @@ lasso_init_4 <- list(
     .RNG.seed = seed+3
 )
 
-# Save model configs
-lasso_compiled <- run.jags(
-    model = lasso_post_model,
-    monitor = c("beta"), 
-    data = lasso_post_data,
-    inits = list(lasso_init_1, lasso_init_2, lasso_init_3, lasso_init_4),
-    n.chains = 4,
-    sample = 0,
-    method = "parallel"
-)
-write.jagsfile(lasso_compiled, file = paste0(subdir_name, "model.txt"))
-
 
 
 
 ##### Run the MCMC sampler #####
 lasso_post_samples <- run.jags(
     model = lasso_post_model,
-    monitor = c("beta"), 
+    monitor = c("beta", "sparse_dim", "S_supported"), 
     data = lasso_post_data,
     inits = list(lasso_init_1, lasso_init_2, lasso_init_3, lasso_init_4),
     n.chains = 4,
@@ -170,7 +169,6 @@ lasso_post_samples <- run.jags(
 
 
 ##### Write results locally #####
-
 
 # Function to compute mode of a vector from a spike-and-slab 
 # The spike threshold is minimum proportion of non-zero 
@@ -189,20 +187,24 @@ spike_slab_mode <- function(samples, slab_threshold){
 
 # Summary statistics for the chains
 mcmc_summary_df <- as.data.frame(summary(lasso_post_samples))
+beta_rows <- grep("^beta", rownames(mcmc_summary_df))
+mcmc_summary_df <- mcmc_summary_df[beta_rows, ]
 mcmc_summary_df <- cbind(TrueCoef = true_betas, mcmc_summary_df)
 
 # Extract the chains
 mcmc_sample_df <- as.matrix(as.mcmc.list(lasso_post_samples))
-mcmc_sample_S <- mcmc_sample_df[, true_S]
+mcmc_betas_df <- mcmc_sample_df[, grep("^beta", colnames(mcmc_sample_df))]
+mcmc_sparsity_df <- mcmc_sample_df[, c("sparse_dim", "S_supported")]
 
+# Sparsity info
 write.csv(
-    mcmc_sample_S, 
-    file = paste0(subdir_name, "LASSO_MCMC_samples.csv")
+    mcmc_sparsity_df, 
+    file = paste0(subdir_name, "LASSO_MCMC_sparsity.csv")
 )
 
 # Compute posterior modes for each parameter from samples
 MCMC_mode <- apply(
-    mcmc_sample_df,
+    mcmc_betas_df,
     MARGIN = 2,
     FUN = spike_slab_mode,
     slab_threshold = 0.5
@@ -214,7 +216,6 @@ write.csv(
     mcmc_summary_df,
     file = paste0(subdir_name, "LASSO_MCMC_summary.csv")
 )
-
 
 # Compute posterior modes for Y_train and Y_test
 Y_train_mode <- X_train %*% MCMC_mode
