@@ -3,9 +3,6 @@ library(runjags)
 library(here)
 library(argparse)
 
-# Set seed for consistent results
-# set.seed(3001)
-
 
 # Settings for the compute cluster
 Sys.setenv(

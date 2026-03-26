@@ -1,9 +1,7 @@
 library(rjags)
 library(runjags)
 library(here)
-
-# Set seed for consistent results
-# set.seed(3001)
+library(argparse)
 
 
 # Settings for the compute cluster
