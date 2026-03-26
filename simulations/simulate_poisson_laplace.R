@@ -21,11 +21,20 @@ setwd(here::here())
 
 
 # Get command line arguments
-args <- commandArgs(trailingOnly = TRUE)
-n_sims <- as.integer(args[1])
-n <- as.integer(args[2])
-p <- as.integer(args[3])
-sparse_prop <- as.numeric(args[4])
+parser <- ArgumentParser()
+parser$add_argument("--n_sims", type = "integer")
+parser$add_argument("--n", type = "integer")
+parser$add_argument("--p", type = "integer")
+parser$add_argument("--sparse_prop", type = "double")
+parser$add_argument("--seed", type = "integer")
+args <- parser$parse_args()
+
+# Access by name
+n_sims <- args$n_sims
+n <- args$n
+p <- args$p
+sparse_prop <- args$sparse_prop
+seed <- args$seed
 
 
 
@@ -110,28 +119,28 @@ lasso_init_1 <- list(
     slab = rep(1, p),
     r = 1/p,
     .RNG.name = "base::Marsaglia-Multicarry",
-    .RNG.seed = 17
+    .RNG.seed = seed
 )
 lasso_init_2 <- list(
     cat = rep(2, p),
     slab = rep(1, p),
     r = 1/p,
     .RNG.name = "base::Marsaglia-Multicarry",
-    .RNG.seed = 18
+    .RNG.seed = seed+1
 )
 lasso_init_3 <- list(
     cat = rep(2, p),
     slab = rep(1, p),
     r = 1/p,
     .RNG.name = "base::Marsaglia-Multicarry",
-    .RNG.seed = 19
+    .RNG.seed = seed+2
 )
 lasso_init_4 <- list(
     cat = rep(2, p),
     slab = rep(1, p),
     r = 1/p,
     .RNG.name = "base::Marsaglia-Multicarry",
-    .RNG.seed = 20
+    .RNG.seed = seed+3
 )
 
 # Save model configs

@@ -22,12 +22,6 @@ setwd(here::here())
 
 
 # Get command line arguments
-# args <- commandArgs(trailingOnly = TRUE)
-# n_sims <- as.integer(args[1])
-# n <- as.integer(args[2])
-# p <- as.integer(args[3])
-# sparse_prop <- as.numeric(args[4])
-
 parser <- ArgumentParser()
 parser$add_argument("--n_sims", type = "integer")
 parser$add_argument("--n", type = "integer")
