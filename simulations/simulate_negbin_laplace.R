@@ -64,7 +64,7 @@ X_train <- matrix(rnorm(n * p, mean = 0, sd = 1), nrow = n, ncol = p)
 Y_train <- rnbinom(n, size = true_phi, mu = exp(X_train %*% true_betas))
 
 X_test <- matrix(rnorm(n * p, mean = 0, sd = 1), nrow = n, ncol = p)
-Y_train <- rnbinom(n, size = true_phi, mu = exp(X_test %*% true_betas))
+Y_test <- rnbinom(n, size = true_phi, mu = exp(X_test %*% true_betas))
 
 
 
