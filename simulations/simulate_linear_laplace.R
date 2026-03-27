@@ -9,7 +9,7 @@ Sys.setenv(
     OMP_NUM_THREADS = 1,
     MKL_NUM_THREADS=1,
     BLAS_NUM_THREADS=1,
-    LAPACK_NUM_THREDS=1)
+    LAPACK_NUM_THREADS=1)
 
 
 

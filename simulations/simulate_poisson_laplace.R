@@ -9,12 +9,12 @@ Sys.setenv(
     OMP_NUM_THREADS = 1,
     MKL_NUM_THREADS=1,
     BLAS_NUM_THREADS=1,
-    LAPACK_NUM_THREDS=1)
+    LAPACK_NUM_THREADS=1)
 
 
 
 # Set file location and working directory
-here::i_am("simulations/simulate_linear_laplace.R")
+here::i_am("simulations/simulate_poisson_laplace.R")
 setwd(here::here())
 
 
