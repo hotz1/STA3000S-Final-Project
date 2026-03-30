@@ -40,7 +40,7 @@ sim_info_tbl <- crossing(model_tbl, prior_tbl, aspect_tbl) %>%
 
 
 
-##### First Plot(s): Contingency Tables #####
+##### First Visual: Contingency Tables #####
 
 for(i in seq_len(nrow(sim_info_tbl))){
     sim_info <- sim_info_tbl[i, ]
@@ -226,7 +226,7 @@ for(i in seq_len(nrow(sim_info_tbl))){
     
    
  
-##### Second Plot(s): Histogram of Dimensionality #####
+##### Second Visual: Histogram of Dimensionality #####
 
 for(i in seq_len(nrow(sim_info_tbl))){
     sim_info <- sim_info_tbl[i, ]
@@ -330,3 +330,62 @@ for(i in seq_len(nrow(sim_info_tbl))){
            height = 8,
            units = "in")
 }
+
+
+
+
+##### Third Visual: Tables of RMSE for Train and Test Datasets #####
+
+for(i in seq_len(nrow(sim_info_tbl))){
+    sim_info <- sim_info_tbl[i, ]
+    
+    # Get folder containing results, set output name and folder
+    results_folder <- here(
+        "simulations", "results", sim_info$model_prior, sim_info$aspect_name
+    )
+    out_dir <- here(
+        "simulations", "plots", sim_info$model_prior, sim_info$aspect_name
+    )
+    if(!dir.exists(out_dir)){
+        dir.create(out_dir, recursive = TRUE)
+    }
+    
+    # Read in summary files
+    MCMC_predictions <- list()
+    prediction_files <- list.files(
+        path = results_folder,
+        pattern = ".*predictions.csv", 
+        full.names = T,
+        recursive = T)
+    
+    # Create tables of information
+    RMSE_tables <- list()
+    for(f in seq_along(prediction_files)){
+        MCMC_predictions[[f]] <- read_csv(
+            prediction_files[f],
+            col_select = c(-1)
+        )
+        preds = MCMC_predictions[[f]]
+        train_RMSE <- sqrt(mean((preds$Y_train_true - preds$Y_train_pred)^2))
+        test_RMSE <- sqrt(mean((preds$Y_test_true - preds$Y_test_pred)^2))
+        
+        RMSE_tables[[f]] <- data.frame(
+            `Model` = sim_info$model_clean, 
+            `Prior` = sim_info$prior_clean, 
+            `Sample Size` = p.sims[f] * sim_info$aspect_ratio,
+            `Parameters` = p.sims[f],
+            `Aspect Ratio` = sim_info$aspect_clean,
+            `Train RMSE` = sprintf("%.4g", train_RMSE), 
+            `Test RMSE` = sprintf("%.4g", test_RMSE)
+        )
+    }
+    
+    # Final table
+    all_RMSE_tbl <- bind_rows(RMSE_tables)
+    all_RMSE_tbl %>%
+        kable(format = "html", 
+              col.names = stringr::str_replace(colnames(all_RMSE_tbl), "\\.", " ")) %>%
+        kable_styling(latex_options = c("striped", "hold_position")) %>%
+        save_kable(file = paste0(out_dir, "/", "RMSE_table.jpeg"))
+}
+
